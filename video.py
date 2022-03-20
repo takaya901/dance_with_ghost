@@ -3,32 +3,41 @@ from collections import deque
 import time
 from icecream import ic
 
-start_time = time.perf_counter()
+ghosts_num = 5
+delay = 0.5
+buffer_idx = 0
+alpha = 0.8
 
 # 遅れて表示するためのバッファ
-frame_queue = deque()
-buffer_time = 2
-buffer_idx = 0
-alpha = 0.6
+frame_queues = []
+for i in range(ghosts_num):
+    frame_queues.append(deque())
+ic(range(1, ghosts_num))
 
-cap1 = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)
+
+start_time = time.perf_counter()
 
 while(True):
-    ret1, frame1 = cap1.read()
-    frame_queue.append(frame1)
-    # cv2.imshow('frame1',frame1)
+    ret, frame = cap.read()
+
+    for i in range(ghosts_num):
+        #delay秒経過したらアルファブレンド開始
+        now = time.perf_counter()
+        if(now - start_time < delay * i):
+            continue
+
+        if(i == 0):
+            frame_queues[i].append(frame)
+        else:
+            current_frame = frame_queues[i-1].popleft()
+            frame_queues[i].append(current_frame)
+            frame = cv2.addWeighted(frame, alpha, current_frame, 1-alpha, 0)
+            
+        cv2.imshow('frame',frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-    #buffer_time経過したらアルファブレンド開始
-    now = time.perf_counter()
-    if(now - start_time < buffer_time):
-        continue
-
-    dst = cv2.addWeighted(frame1, alpha, frame_queue.popleft(), 1-alpha, 0)
-    cv2.imshow('frame2',dst)
-    buffer_idx += 1
-
-cap1.release()
+cap.release()
 cv2.destroyAllWindows()
